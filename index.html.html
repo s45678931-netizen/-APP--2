@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>茶飲訂餐系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .btn-primary {
+            background-color: #10B981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #059669;
+        }
+        .btn-secondary {
+            background-color: white;
+            border: 2px solid #10B981;
+            color: #10B981;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-secondary:hover {
+            background-color: #ECFDF5;
+        }
+        .btn-secondary.active {
+            background-color: #10B981;
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+        .toast.success {
+            background-color: #10B981;
+        }
+        .toast.error {
+            background-color: #EF4444;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-amber-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-center text-green-800 mb-6">
+                🍃 茶飲訂餐系統 🍃
+            </h1>
+
+            <!-- 訂餐表單 -->
+            <div class="grid lg:grid-cols-2 gap-6">
+                <!-- 左側 - 商品選擇 -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            👤 您的姓名
+                        </label>
+                        <input
+                            type="text"
+                            id="customerName"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            placeholder="請輸入您的姓名"
+                        />
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">🍵 選擇商品</h3>
+                        <div class="space-y-3 max-h-64 overflow-y-auto" id="menuContainer">
+                            <!-- 菜單將由JavaScript動態生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側 - 客製選項 -->
+                <div class="space-y-4">
+                    <div id="customOptions" class="hidden bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-800 mb-3" id="selectedItem">已選擇: </h3>
+                        
+                        <!-- 杯型選擇 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">杯型</label>
+                            <div class="flex gap-2">
+                                <button class="btn-secondary active" data-option="size" data-value="大杯">大杯</button>
+                            </div>
+                        </div>
+
+                        <!-- 冰度選擇 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">冰度</label>
+                            <div class="grid grid-cols-2 gap-2" id="iceOptions">
+                                <!-- 冰度選項將由JavaScript生成 -->
+                            </div>
+                        </div>
+
+                        <!-- 糖度選擇 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">糖度</label>
+                            <div class="grid grid-cols-3 gap-2" id="sugarOptions">
+                                <!-- 糖度選項將由JavaScript生成 -->
+                            </div>
+                        </div>
+
+                        <!-- 加料選擇 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">加料 (+20元)</label>
+                            <div class="space-y-2" id="toppingsOptions">
+                                <!-- 加料選項將由JavaScript生成 -->
+                            </div>
+                        </div>
+
+                        <!-- 備註 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">備註</label>
+                            <textarea
+                                id="orderNotes"
+                                class="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                rows="2"
+                                placeholder="特殊需求或備註..."
+                            ></textarea>
+                        </div>
+
+                        <!-- 小計 -->
+                        <div class="text-right text-lg font-semibold text-green-800 mb-4">
+                            小計: NT$ <span id="orderTotal">0</span>
+                        </div>
+
+                        <button id="addOrderBtn" class="btn-primary w-full flex items-center justify-center gap-2">
+                            🛒 加入訂單
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 訂單列表 -->
+        <div id="ordersList" class="hidden bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                👥 訂單總覽
+            </h2>
+            
+            <div id="ordersContainer" class="space-y-3 mb-6">
+                <!-- 訂單將由JavaScript動態生成 -->
+            </div>
+
+            <div class="border-t pt-4">
+                <div class="flex justify-between items-center text-xl font-bold">
+                    <span class="flex items-center gap-2">
+                        🧮 總金額
+                    </span>
+                    <span class="text-2xl text-green-600">NT$ <span id="totalAmount">0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bonus 遊戲 Modal -->
+    <div id="bonusModal" class="modal">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
+            <div class="text-center">
+                <div class="text-4xl text-purple-600 mb-4">🎵</div>
+                <h3 class="text-2xl font-bold text-purple-800 mb-4">🎵 Bonus 時間！</h3>
+                <p class="text-gray-700 mb-4">請根據以下歌詞猜出歌曲名稱：</p>
+                <div class="bg-purple-50 p-4 rounded-lg mb-4">
+                    <p class="text-lg font-semibold text-purple-800" id="bonusLyric"></p>
+                </div>
+                <input
+                    type="text"
+                    id="bonusAnswer"
+                    class="w-full p-3 border border-purple-300 rounded-lg mb-4"
+                    placeholder="請輸入歌曲名稱..."
+                />
+                <button id="submitBonusBtn" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors">
+                    提交答案
+                </button>
+                <div id="bonusResult" class="mt-4 p-3 rounded-lg hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // 全域變數
+        let orders = [];
+        let currentOrder = {
+            name: '',
+            category: '',
+            item: '',
+            price: 0,
+            size: '大杯',
+            ice: '完全冰',
+            sugar: '全糖',
+            toppings: [],
+            notes: '',
+            total: 0
+        };
+
+        // 菜單資料
+        const menu = {
+            '茶 (Tea)': [
+                { name: '梔花日青', price: 80 },
+                { name: '澄金烏龍', price: 80 },
+                { name: '山古樹紅', price: 80 }
+            ],
+            '鮮調 (Fresh Blended Tea)': [
+                { name: '檸檬金烏', price: 110 },
+                { name: '蜜桃花青', price: 140 },
+                { name: '紅柚花青', price: 150 }
+            ],
+            '鄉韻 (Taiwan Memory)': [
+                { name: '冬瓜金烏', price: 100 },
+                { name: '冬檸蜂韻', price: 110 }
+            ],
+            '奶茶 (Milk Tea)': [
+                { name: '金烏奶茶', price: 100 },
+                { name: '樹紅奶茶', price: 100 },
+                { name: '樹紅珍奶', price: 110 }
+            ],
+            '小農鮮乳坊 (Fresh Milk)': [
+                { name: '金烏鮮乳', price: 130 },
+                { name: '樹紅鮮乳', price: 130 }
+            ],
+            '蜜蜂工坊 (BeeTouched)': [
+                { name: '蜜芳花青', price: 100 },
+                { name: '蜜芳檸青', price: 130 },
+                { name: '蜜檸薈青', price: 140 }
+            ],
+            '茶點 (Dessert)': [
+                { name: '架飛蛋塔', price: 85 }
+            ]
+        };
+
+        const toppings = [
+            { name: '珍珠', price: 20 },
+            { name: '蘆薈', price: 20 }
+        ];
+
+        const iceOptions = ['完全冰', '少冰', '微冰', '去冰'];
+        const sugarOptions = ['全糖', '少糖', '半糖', '微糖', '無糖'];
+
+        // 歌詞題庫 (30題)
+        const songLyrics = [
+            { lyric: '星空下的約定永遠不變守候到天明', answer: '約定' },
+            { lyric: '風輕輕吹過我心裡帶走了所有煩憂', answer: '風的季節' },
+            { lyric: '那些年我們一起走過的美好時光', answer: '那些年' },
+            { lyric: '愛你就像愛生命一樣深深刻在心中', answer: '愛的代價' },
+            { lyric: '月亮代表我的心照亮你回家的路', answer: '月亮代表我的心' },
+            { lyric: '淚光閃閃的夜晚想起你溫柔的笑容', answer: '淚光閃閃' },
+            { lyric: '青春無悔的歲月我們曾經一起奮鬥', answer: '青春' },
+            { lyric: '海闊天空任我飛翔追尋心中的夢想', answer: '海闊天空' },
+            { lyric: '雨過天晴後彩虹在天空中閃耀光芒', answer: '彩虹' },
+            { lyric: '思念如潮水般湧來淹沒了整個夜晚', answer: '思念' },
+            { lyric: '時光荏苒歲月如流水般匆匆而過', answer: '時光' },
+            { lyric: '夢想的翅膀帶我飛向遙遠的地方', answer: '夢想' },
+            { lyric: '花開花落又是一個春天悄悄來臨', answer: '花季' },
+            { lyric: '相思的雨滴打在窗台上響起心聲', answer: '相思雨' },
+            { lyric: '夜深人靜時分我想起你的溫暖擁抱', answer: '夜想曲' },
+            { lyric: '離別的車站月台上我們揮手告別', answer: '月台' },
+            { lyric: '童年的記憶像糖果一樣甜蜜美好', answer: '童年' },
+            { lyric: '漫步在海邊沙灘聽著浪花拍打聲音', answer: '海邊' },
+            { lyric: '春天的櫻花盛開滿樹粉紅色的浪漫', answer: '櫻花' },
+            { lyric: '秋天的楓葉片片飄落訴說離愁別緒', answer: '楓葉情' },
+            { lyric: '冬天的雪花紛飛如你純潔美麗笑顏', answer: '雪花' },
+            { lyric: '夏天的陽光灑在你臉上如此耀眼動人', answer: '夏日' },
+            { lyric: '星星點亮了整片夜空為愛情指引方向', answer: '星光' },
+            { lyric: '溫柔的晚風輕撫臉頰帶來你的思念', answer: '晚風' },
+            { lyric: '歲月的痕跡刻在心裡永遠不會消失', answer: '歲月' },
+            { lyric: '愛情的玫瑰雖然美麗卻帶著銳利刺痛', answer: '玫瑰' },
+            { lyric: '命運的齒輪開始轉動改變了我們人生', answer: '命運' },
+            { lyric: '希望的種子在心中發芽長成參天大樹', answer: '希望' },
+            { lyric: '友情的橋樑跨越時空連接彼此的心靈', answer: '友情' },
+            { lyric: '幸福的鐘聲響起迎接美好未來到來', answer: '幸福' }
+        ];
+
+        let currentBonusQuestion = null;
+
+        // 初始化頁面
+        function initPage() {
+            generateMenu();
+            generateOptions();
+            bindEvents();
+        }
+
+        // 生成菜單
+        function generateMenu() {
+            const container = document.getElementById('menuContainer');
+            container.innerHTML = '';
+
+            Object.entries(menu).forEach(([category, items]) => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'border rounded-lg p-3';
+                
+                const categoryTitle = document.createElement('h4');
+                categoryTitle.className = 'font-medium text-green-700 mb-2';
+                categoryTitle.textContent = category;
+                categoryDiv.appendChild(categoryTitle);
+
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'space-y-1';
+
+                items.forEach(item => {
+                    const itemBtn = document.createElement('button');
+                    itemBtn.className = 'w-full text-left p-2 rounded-md text-sm transition-colors bg-gray-50 hover:bg-green-50 border border-gray-200';
+                    itemBtn.innerHTML = `
+                        <span class="font-medium">${item.name}</span>
+                        <span class="float-right text-orange-600">NT$ ${item.price}</span>
+                    `;
+                    itemBtn.addEventListener('click', () => selectItem(category, item));
+                    itemsDiv.appendChild(itemBtn);
+                });
+
+                categoryDiv.appendChild(itemsDiv);
+                container.appendChild(categoryDiv);
+            });
+        }
+
+        // 生成選項
+        function generateOptions() {
+            // 冰度選項
+            const iceContainer = document.getElementById('iceOptions');
+            iceOptions.forEach(ice => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-secondary';
+                btn.textContent = ice;
+                btn.setAttribute('data-option', 'ice');
+                btn.setAttribute('data-value', ice);
+                if (ice === '完全冰') btn.classList.add('active');
+                iceContainer.appendChild(btn);
+            });
+
+            // 糖度選項
+            const sugarContainer = document.getElementById('sugarOptions');
+            sugarOptions.forEach(sugar => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-secondary';
+                btn.textContent = sugar;
+                btn.setAttribute('data-option', 'sugar');
+                btn.setAttribute('data-value', sugar);
+                if (sugar === '全糖') btn.classList.add('active');
+                sugarContainer.appendChild(btn);
+            });
+
+            // 加料選項
+            const toppingsContainer = document.getElementById('toppingsOptions');
+            toppings.forEach(topping => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-2 rounded-md text-sm transition-colors bg-white border border-purple-300 hover:bg-purple-50';
+                btn.innerHTML = `➕ ${topping.name} (+NT$ ${topping.price})`;
+                btn.setAttribute('data-topping', topping.name);
+                btn.setAttribute('data-price', topping.price);
+                toppingsContainer.appendChild(btn);
+            });
+        }
+
+        // 綁定事件
+        function bindEvents() {
+            // 選項按鈕事件
+            document.addEventListener('click', (e) => {
+                if (e.target.hasAttribute('data-option')) {
+                    const option = e.target.getAttribute('data-option');
+                    const value = e.target.getAttribute('data-value');
+                    
+                    // 移除同組的 active 類
+                    document.querySelectorAll(`[data-option="${option}"]`).forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    e.target.classList.add('active');
+                    
+                    currentOrder[option] = value;
+                    updateOrderTotal();
+                }
+
+                // 加料按鈕
+                if (e.target.hasAttribute('data-topping')) {
+                    const toppingName = e.target.getAttribute('data-topping');
+                    const toppingPrice = parseInt(e.target.getAttribute('data-price'));
+                    
+                    const existingIndex = currentOrder.toppings.findIndex(t => t.name === toppingName);
+                    if (existingIndex > -1) {
+                        currentOrder.toppings.splice(existingIndex, 1);
+                        e.target.classList.remove('bg-purple-100', 'border-purple-500');
+                        e.target.classList.add('bg-white', 'border-purple-300');
+                    } else {
+                        currentOrder.toppings.push({ name: toppingName, price: toppingPrice });
+                        e.target.classList.remove('bg-white', 'border-purple-300');
+                        e.target.classList.add('bg-purple-100', 'border-purple-500');
+                    }
+                    updateOrderTotal();
+                }
+            });
+
+            // 加入訂單按鈕
+            document.getElementById('addOrderBtn').addEventListener('click', addOrder);
+
+            // Bonus 遊戲按鈕
+            document.getElementById('submitBonusBtn').addEventListener('click', submitBonusAnswer);
+
+            // 備註輸入
+            document.getElementById('orderNotes').addEventListener('input', (e) => {
+                currentOrder.notes = e.target.value;
+            });
+        }
+
+        // 選擇商品
+        function selectItem(category, item) {
+            // 移除之前選中的樣式
+            document.querySelectorAll('#menuContainer button').forEach(btn => {
+                btn.classList.remove('bg-green-100', 'border-green-500');
+                btn.classList.add('bg-gray-50', 'border-gray-200');
+            });
+
+            // 添加選中樣式
+            event.target.classList.remove('bg-gray-50', 'border-gray-200');
+            event.target.classList.add('bg-green-100', 'border-green-500');
+
+            currentOrder.category = category;
+            currentOrder.item = item.name;
+            currentOrder.price = item.price;
+
+            document.getElementById('selectedItem').textContent = `已選擇: ${item.name}`;
+            document.getElementById('customOptions').classList.remove('hidden');
+            
+            updateOrderTotal();
+        }
+
+        // 計算訂單總價
+        function calculateOrderTotal(order) {
+            const basePrice = order.price;
+            const toppingsPrice = order.toppings.reduce((sum, topping) => sum + topping.price, 0);
+            return basePrice + toppingsPrice;
+        }
+
+        // 更新訂單總價顯示
+        function updateOrderTotal() {
+            currentOrder.total = calculateOrderTotal(currentOrder);
+            document.getElementById('orderTotal').textContent = currentOrder.total;
+        }
+
+        // 添加訂單
+        function addOrder() {
+            const name = document.getElementById('customerName').value.trim();
+            
+            if (!name || !currentOrder.item) {
+                showToast('請填寫姓名和選擇商品！', 'error');
+                return;
+            }
+
+            const newOrder = { ...currentOrder, name, id: Date.now() };
+            orders.push(newOrder);
+            
+            // 顯示 Bonus 遊戲
+            showBonusGame();
+            
+            // 重置表單
+            resetForm();
+            
+            // 更新訂單列表
+            updateOrdersList();
+        }
+
+        // 重置表單
+        function resetForm() {
+            document.getElementById('customerName').value = '';
+            document.getElementById('orderNotes').value = '';
+            document.getElementById('customOptions').classList.add('hidden');
+            
+            // 重置選項
+            document.querySelectorAll('.btn-secondary').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('[data-option="ice"][data-value="完全冰"]')[0].classList.add('active');
+            document.querySelectorAll('[data-option="sugar"][data-value="全糖"]')[0].classList.add('active');
+            
+            // 重置加料
+            document.querySelectorAll('[data-topping]').forEach(btn => {
+                btn.classList.remove('bg-purple-100', 'border-purple-500');
+                btn.classList.add('bg-white', 'border-purple-300');
+            });
+
+            // 重置商品選擇
+            document.querySelectorAll('#menuContainer button').forEach(btn => {
+                btn.classList.remove('bg-green-100', 'border-green-500');
+                btn.classList.add('bg-gray-50', 'border-gray-200');
+            });
+            
+            currentOrder = {
+                name: '',
+                category: '',
+                item: '',
+                price: 0,
+                size: '大杯',
+                ice: '完全冰',
+                sugar: '全糖',
+                toppings: [],
+                notes: '',
+                total: 0
+            };
+        }
+
+        // 顯示 Bonus 遊戲
+        function showBonusGame() {
+            currentBonusQuestion = songLyrics[Math.floor(Math.random() * songLyrics.length)];
+            document.getElementById('bonusLyric').textContent = `"${currentBonusQuestion.lyric}"`;
+            document.getElementById('bonusAnswer').value = '';
+            document.getElementById('bonusResult').classList.add('hidden');
+            document.getElementById('bonusModal').classList.add('show');
+        }
+
+        // 提交 Bonus 答案
+        function submitBonusAnswer() {
+            const userAnswer = document.getElementById('bonusAnswer').value.trim();
+            const resultDiv = document.getElementById('bonusResult');
+            
+            if (userAnswer.toLowerCase() === currentBonusQuestion.answer.toLowerCase()) {
+                resultDiv.textContent = '妳太厲害了!!!此杯由科長招待';
+                resultDiv.className = 'mt-4 p-3 rounded-lg bg-green-100 text-green-800';
+                
+                // 將最後一個訂單設為免費
+                if (orders.length > 0) {
+                    orders[orders.length - 1].total = 0;
+                    orders[orders.length - 1].sponsored = true;
+                }
+            } else {
+                resultDiv.textContent = '太可惜了~答對會有特殊獎勵~下次再努力!!!';
+                resultDiv.className = 'mt-4 p-3 rounded-lg bg-yellow-100 text-yellow-800';
+            }
+            
+            resultDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('bonusModal').classList.remove('show');
+                updateOrdersList();
+            }, 3000);
+        }
+
+        // 更新訂單列表
+        function updateOrdersList() {
+            const container = document.getElementById('ordersContainer');
+            const ordersList = document.getElementById('ordersList');
+            
+            if (orders.length === 0) {
+                ordersList.classList.add('hidden');
+                return;
+            }
+            
+            ordersList.classList.remove('hidden');
+            container.innerHTML = '';
+            
+            orders.forEach(order => {
+                const orderDiv = document.createElement('div');
+                orderDiv.className = 'bg-gray-50 p-4 rounded-lg';
+                
+                orderDiv.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800">${order.name}</h4>
+                            <p class="text-gray-600">
+                                ${order.item} (${order.size}, ${order.ice}, ${order.sugar})
+                            </p>
+                            ${order.toppings.length > 0 ? `
+                                <p class="text-sm text-purple-600">
+                                    加料: ${order.toppings.map(t => t.name).join(', ')}
+                                </p>
+                            ` : ''}
+                            ${order.notes ? `
+                                <p class="text-sm text-gray-500">備註: ${order.notes}</p>
+                            ` : ''}
+                            ${order.sponsored ? `
+                                <p class="text-sm text-green-600 font-semibold">🎉 科長招待</p>
+                            ` : ''}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-semibold ${order.sponsored ? 'text-green-600' : 'text-orange-600'}">
+                                ${order.sponsored ? '免費' : `NT$ ${order.total}`}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(orderDiv);
+            });
+            
+            // 更新總金額
+            const totalAmount = orders.reduce((sum, order) => sum + order.total, 0);
+            document.getElementById('totalAmount').textContent = totalAmount;
+        }
+
+        // 顯示 Toast 通知
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>
